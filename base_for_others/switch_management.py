@@ -347,7 +347,8 @@ def command_writer(user,passw,host,model,tn):
 
 def mku_checker(lldp_ip):
     '''На вход поступает вывод команды sh lldp neighboors. Ищет в нём mku. 
-    Если нашёл возвращает True.'''
+    Если нашёл, возвращает True.'''
+
     if 'D-Link DGS' in lldp_ip:
         return True
     else:
