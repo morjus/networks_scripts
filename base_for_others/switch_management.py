@@ -325,7 +325,7 @@ def end_connection(user,passw,host,model,tn):
 def command_writer(user,passw,host,model,tn):
 
     if 'D-Link' in model:
-        tn.write(b'show lldp rem\r')
+        tn.write(b'show lldp rem 25-28\r')
         with open (ip+'.txt', 'w') as f:
             f.write(tn.read_until(b'#', timeout=5).decode('ascii','ignore'))
 
@@ -345,6 +345,20 @@ def command_writer(user,passw,host,model,tn):
         print('В скрипте нет модели',model)
         return None
 
+def mku_checker(lldp_ip):
+    '''На вход поступает вывод команды sh lldp neighboors. Ищет в нём mku. 
+    Если нашёл возвращает True.'''
+    if 'D-Link DGS' in lldp_ip:
+        return True
+    else:
+        return False
+
+def mku_finder(user,passw,host,model,tn):
+    if 'D-Link' in model:
+        tn.write(b'show lldp rem 25-28\r')
+        with open (ip+'.txt', 'w') as f:
+            f.write(tn.read_until(b'#', timeout=5).decode('ascii','ignore'))
+
 def main(ip):
     data = {}
     USER = 'khusainov.if'     #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< CAUTION!!!!
@@ -357,7 +371,7 @@ def main(ip):
             try:
                 tn = connector(USER, PASSWORD, ip, data) #It's global now!
                 begin_connection(USER, PASSWORD, ip, data, tn)
-                #command_writer(USER, PASSWORD, ip, data, tn)
+                command_writer(USER, PASSWORD, ip, data, tn)
                 end_connection(USER, PASSWORD, ip, data, tn)
                 tn.close()
             except:
