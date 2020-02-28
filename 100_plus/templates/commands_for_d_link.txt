@@ -1,0 +1,40 @@
+config vlan VLAN add untagged PORT
+config stp ports PORT state disable fbpdu disable
+config stp ports PORT restricted_role true
+config stp ports PORT restricted_tcn true
+config stp ports PORT externalCost auto edge false p2p auto state disable
+config traffic control PORT broadcast enable multicast enable unicast disable action shutdown threshold 64 countdown 5 time_interval 5
+config limited_multicast_addr ports PORT add profile_id 1
+config limited_multicast_addr ports PORT add profile_id 2
+config igmp_snooping multicast_vlan iptv delete source_port PORT
+config igmp_snooping multicast_vlan iptv add member_port PORT
+config max_mcast_group port PORT max_group 15
+config router_ports_forbidden iptv add PORT
+config multicast port_filtering_mode PORT filter_unregistered_groups
+config traffic control PORT broadcast enable multicast enable unicast disable action shutdown threshold 64 countdown 5 time_interval 5
+config mac_notification ports PORT enable
+config stp ports PORT externalCost auto edge true p2p auto state disable lbd enable
+config stp ports PORT fbpdu disable
+config stp ports PORT restricted_role true
+config stp ports PORT restricted_tcn true
+config lldp ports PORT admin_status rx_only
+config stp ports PORT externalCost auto edge true p2p auto state disable
+config stp ports PORT externalCost auto edge true p2p auto state disable
+config loopdetect port PORT state enabled
+config filter dhcp_server ports PORT state enable
+enable dhcp_local_relay
+config dhcp_local_relay option_82 remote_id default
+config dhcp_local_relay vlan VLAN state en
+config dhcp_local_relay option_82 ports PORT policy replace
+delete access_profile profile_id 20
+create access_profile ethernet ethernet_type profile_id 20
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x8863 port all permit
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x8864 port all permit
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x9000 port all permit
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x0806 port all permit
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x888E port all deny
+config access_profile profile_id 20 add access_id auto_assign  ethernet  ethernet_type 0x86DD      port IPV6 permit
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x86DD port all deny
+
+
+

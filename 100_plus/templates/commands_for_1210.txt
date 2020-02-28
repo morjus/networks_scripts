@@ -1,0 +1,21 @@
+config multicast filter PORT filter
+config stp ports PORT externalcost auto edge true restricted_tcn true restricted_role true p2p auto state disable priority 128 fbpdu disable
+config lldp ports PORT admin_status rx_only
+config mac_notification ports PORT enable
+config loopdetect ports PORT state enable
+config traffic control PORT broadcast enable multicast enable unicast disable action shutdown threshold 64 time_interval 5 countdown 5
+config igmp_snooping multicast_vlan iptv delete source_port PORT
+config igmp_snooping multicast_vlan iptv add member_port PORT
+config ethernet_oam ports PORT link_monitor error_frame_period threshold 1 window 148810 notify_state enable
+config ports PORT capability_advertised 10_half 10_full 100_half 100_full
+config max_mcast_group ports PORT ipv4 max_group 15 action replace
+config filter dhcp_server ports PORT state enable
+delet access_pr pr 20
+create access_profile ethernet ethernet_type profile_id 20
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x8863 port all permit
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x8864 port all permit
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x9000 port all permit
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x0806 port all permit
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x888E port all deny
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x86DD port IPV6 permit
+config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x86DD port all deny

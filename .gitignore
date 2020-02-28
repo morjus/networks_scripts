@@ -1,0 +1,19 @@
+# folders
+100_plus/__pycache__/
+base_for_others/__pycache__/
+generator/RESULT/
+generator/TEMPLATES/
+pppoe/old_ver/
+pvid_search/ignore/
+pvid_search/bras_parser/
+pvid_search/__pycache__/
+
+#xls-files
+generator/*.xls
+
+#text-files
+base_for_others/*.txt
+pvid_search/*.txt
+
+#json-files
+pvid_search/*.json
