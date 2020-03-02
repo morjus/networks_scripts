@@ -6,9 +6,11 @@ from datetime import datetime, timedelta
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
 import os
+import json
 from ipaddress import ip_address
 import socket, re, time
 import telnetlib
+from collections import deque
 
 def snmp_get_next(ip,OID,community = keyring.get_password("snmp", "khusainov.if"),port = 161,standalone_value=False):
     '''Аналог команды snmpwalk. На вход IP адрес и OID, который надо итерировать.
@@ -322,43 +324,83 @@ def end_connection(user,passw,host,model,tn):
     except:
         print('End_connection() error.')
 
-def command_writer(user,passw,host,model,tn):
+def lldp_request(user,passw,host,model,tn):
 
+    result = {}
+    res = {}
     if 'D-Link' in model:
-        tn.write(b'show lldp rem 25-28\r')
-        with open (ip+'.txt', 'w') as f:
-            f.write(tn.read_until(b'#', timeout=5).decode('ascii','ignore'))
+        port_lldp = [b'show lldp rem 25\r',b'show lldp rem 26\r',b'show lldp rem 27\r',b'show lldp rem 28\r']
+        for port_lldp_command in port_lldp:
+            tn.write(port_lldp_command)
+            response = tn.read_until(b'#', timeout=5).decode('ascii','ignore')
+            if not "Remote Entities Count : 0" in response:
+                try:
+                    res[re.search(r'Port ID : (?P<port>\d+)',response).group('port')] = response
+                except AttributeError:
+                    print('NoneType. LLDP request fail!')
+                    return None
+        result[host] = res
+        with open(ip+'.json', 'w') as f:
+            json.dump(result, f, sort_keys=True, indent=2)
+        return result
+                
 
     elif 'Huawei' in model:
         tn.write(b'display lldp ne\r')
+        res = tn.read_until(b'>', timeout=5).decode('ascii')
         with open (ip+'.txt', 'w') as f:
-            f.write(tn.read_until(b'>', timeout=5).decode('ascii'))
+            f.write(res)
+        return res
 
     elif 'Tp-Link' in model:
         tn.write(b'show lldp ne int\r')
+        res = tn.read_until(b'#', timeout=5).decode('ascii')
         with open (ip+'.txt', 'w') as f:
-            f.write(tn.read_until(b'#', timeout=5).decode('ascii'))
+            f.write(res)
+        return res
 
     elif model['Maipu']:
-        pass
+        return None
     else:
         print('В скрипте нет модели',model)
         return None
 
-def mku_checker(lldp_ip):
+def mku_checker(lldp_response):
     '''На вход поступает вывод команды sh lldp neighboors. Ищет в нём mku. 
     Если нашёл, возвращает True.'''
 
-    if 'D-Link DGS' in lldp_ip:
+    if 'D-Link DGS' in lldp_response:
         return True
     else:
         return False
 
+def lldp_parser(lldp_response):
+    '''На вход поступает вывод команды show lldp neighboors port 25.
+    делает проверку на предмет присутствия DGS'''
+
+    for port, lldp_res in lldp_response:
+        if mku_checker(lldp_res):
+            return 
+        
+
 def mku_finder(user,passw,host,model,tn):
-    if 'D-Link' in model:
-        tn.write(b'show lldp rem 25-28\r')
-        with open (ip+'.txt', 'w') as f:
-            f.write(tn.read_until(b'#', timeout=5).decode('ascii','ignore'))
+    graph = {host:None}
+    search_queue = deque()
+    search_queue += graph[host]
+    print(search_queue)
+    searched = []
+    topology = {}
+    while search_queue:
+        current_switch = search_queue.popleft()
+        lldp_parser(lldp_request(user,passw,host,model,tn))
+        #Look for port:ip or ip:port
+        #look for ports where MGMT vlan
+        #graph[current_switch] = lldp_response
+        #search_queue += graph
+        pass
+
+
+
 
 def main(ip):
     data = {}
@@ -366,19 +408,19 @@ def main(ip):
     PASSWORD = keyring.get_password("work_for_switches", "khusainov.if")   #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< CAUTION!!!!
     if ip_ping_checker(ip):
         model_snmp_res = get_model(ip)
-        try:
-            data.update(model_choicer(model_snmp_res))
-            print(ip,'а модель такая: ', model_choicer(model_snmp_res))
-            try:
-                tn = connector(USER, PASSWORD, ip, data) #It's global now!
-                begin_connection(USER, PASSWORD, ip, data, tn)
-                command_writer(USER, PASSWORD, ip, data, tn)
-                end_connection(USER, PASSWORD, ip, data, tn)
-                tn.close()
-            except:
-                print('Telnet object is None.')
-        except:
-            pass
+        #try:
+        data.update(model_choicer(model_snmp_res))
+        print(ip,'а модель такая: ', model_choicer(model_snmp_res))
+            #try:
+        tn = connector(USER, PASSWORD, ip, data) #It's global now!
+        begin_connection(USER, PASSWORD, ip, data, tn)
+        lldp_request(USER, PASSWORD, ip, data, tn)
+        end_connection(USER, PASSWORD, ip, data, tn)
+        tn.close()
+            #except:
+                #print('Telnet object is None.')
+        #except:
+        #    pass
     else:
         pass
 

@@ -17,3 +17,4 @@ pvid_search/*.txt
 
 #json-files
 pvid_search/*.json
+base_for_others/*.json
