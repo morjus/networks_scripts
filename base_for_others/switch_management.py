@@ -375,32 +375,55 @@ def mku_checker(lldp_response):
         return False
 
 def lldp_parser(lldp_response):
-    '''На вход поступает вывод команды show lldp neighboors port 25.
-    делает проверку на предмет присутствия DGS'''
+    '''На вход поступает вывод команды show lldp neighboors.
+    делает проверку на предмет присутствия DGS.
+    При неудаче, ищет ip адреса соседей и возвращает их в виде списка.'''
 
-    for port, lldp_res in lldp_response:
-        if mku_checker(lldp_res):
-            return 
-        
+    ip_of_neighbors = []
+    for ip, lldp_res in lldp_response.items():
+        for port, lldp_res_full in lldp_res.items():
+            if mku_checker(lldp_res_full):
+                return ip
+            else:
+                try:
+                    neighbor = re.search(r'((?:\d+\.){3}\d+)', lldp_res_full).group()
+                    ip_of_neighbors.append(neighbor)
+                except:
+                    print("Не удалось найти соседей при парсинге ответа show lldp neighbors.")
+    if ip_of_neighbors:
+        print('Source:',ip, 'Neighbors:', ip_of_neighbors)
+        return ip_of_neighbors
 
 def mku_finder(user,passw,host,model,tn):
-    graph = {host:None}
-    search_queue = deque()
-    search_queue += graph[host]
-    print(search_queue)
+    data = {}
     searched = []
-    topology = {}
-    while search_queue:
-        current_switch = search_queue.popleft()
-        lldp_parser(lldp_request(user,passw,host,model,tn))
-        #Look for port:ip or ip:port
-        #look for ports where MGMT vlan
-        #graph[current_switch] = lldp_response
-        #search_queue += graph
-        pass
-
-
-
+    path_to_dgs = []
+    lldp_out = lldp_parser(lldp_request(user,passw,host,model,tn))
+    if type(lldp_out) is str:
+        print('DGS here:', host)
+    else:
+        graph = {host:lldp_out}
+        path_to_dgs.append(host)
+        searched.append(host)
+        search_queue = deque()
+        search_queue += graph[host]
+        while search_queue:
+            print(path_to_dgs)
+            current_switch = search_queue.popleft()
+            if not current_switch in searched:
+                model_snmp_res = get_model(current_switch)
+                data.update(model_choicer(model_snmp_res))
+                tn = connector(user,passw, current_switch, data)
+                begin_connection(user,passw, current_switch, data, tn)
+                lldp_out = lldp_parser(lldp_request(user,passw,current_switch,model,tn))
+                if type(lldp_out) is str:
+                    print('DGS here:', current_switch)
+                    path_to_dgs.append(current_switch)
+                    print(path_to_dgs)
+                else:
+                    graph.update({current_switch:lldp_out})
+                    search_queue += graph[current_switch]
+                    searched.append(current_switch)
 
 def main(ip):
     data = {}
@@ -414,7 +437,8 @@ def main(ip):
             #try:
         tn = connector(USER, PASSWORD, ip, data) #It's global now!
         begin_connection(USER, PASSWORD, ip, data, tn)
-        lldp_request(USER, PASSWORD, ip, data, tn)
+        mku_finder(USER, PASSWORD, ip, data, tn)
+        #lldp_request(USER, PASSWORD, ip, data, tn)
         end_connection(USER, PASSWORD, ip, data, tn)
         tn.close()
             #except:
