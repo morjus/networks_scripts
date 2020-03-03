@@ -394,11 +394,12 @@ def lldp_parser(lldp_response):
         print('Source:',ip, 'Neighbors:', ip_of_neighbors)
         return ip_of_neighbors
 
-def mku_finder(user,passw,host,model,tn):
+def mku_finder(user,passw,host):
+
+    tn, model = full_connection(user,passw,host)
     if not 'D-Link' in model:
         print('Passing', host)
         return False
-    data = {}
     searched = []
     path_to_dgs = []
     lldp_out = lldp_parser(lldp_request(user,passw,host,model,tn))
@@ -418,12 +419,9 @@ def mku_finder(user,passw,host,model,tn):
         while search_queue:
             current_switch = search_queue.popleft()
             if not current_switch in searched:
-                model_snmp_res = get_model(current_switch)
-                data.update(model_choicer(model_snmp_res))
-                tn = connector(user,passw, current_switch, data)
-                begin_connection(user,passw, current_switch, data, tn)
+                tn = full_connection(user,passw, current_switch)
                 lldp_out = lldp_parser(lldp_request(user,passw,current_switch,model,tn))
-                end_connection(user,passw, current_switch, data, tn)
+                end_connection(user,passw, current_switch, model, tn)
                 if type(lldp_out) is str:
                     print('DGS here:', current_switch)
                     path_to_dgs.append(current_switch)
@@ -434,7 +432,8 @@ def mku_finder(user,passw,host,model,tn):
                     searched.append(current_switch)
         print("Can't find path to MKU from", host+".")
         return False
-def full_connection(user,passw,host,tn):
+        
+def full_connection(user,passw,host):
     '''Принимает на вход логин, пароль, ip.
     Проверяет ip на соответствие формату ip-адресов, доступность.
     Делает запрос по snmp, на основании этого выбирает модель, с которой предстоит работать.
@@ -452,7 +451,7 @@ def full_connection(user,passw,host,tn):
             try:
                 tn = connector(USER, PASSWORD, ip, data)
                 begin_connection(USER, PASSWORD, ip, data, tn)
-                return tn
+                return tn, data
             except:
                 print("Can't connect or can't login.")
                 return False
@@ -461,30 +460,14 @@ def full_connection(user,passw,host,tn):
             return False
 
 def main(ip):
-    data = {}
+    
     USER = 'khusainov.if'     #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< CAUTION!!!!
     PASSWORD = keyring.get_password("work_for_switches", "khusainov.if")   #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< CAUTION!!!!
-    if ip_ping_checker(ip):
-        model_snmp_res = get_model(ip)
-        #try:
-        data.update(model_choicer(model_snmp_res))
-        print(ip,'а модель такая: ', model_choicer(model_snmp_res))
-            #try:
-        tn = connector(USER, PASSWORD, ip, data) #It's global now!
-        begin_connection(USER, PASSWORD, ip, data, tn)
-        path = mku_finder(USER, PASSWORD, ip, data, tn)
-        print(path)
-        #lldp_request(USER, PASSWORD, ip, data, tn)
-        end_connection(USER, PASSWORD, ip, data, tn)
-        tn.close()
-            #except:
-                #print('Telnet object is None.')
-                #return False
-        #except:
-        #    print('No such model')
-        #    return False
-    else:
-        pass
+    tn, data = full_connection(USER, PASSWORD, ip)
+    path = mku_finder(USER, PASSWORD, ip)
+    end_connection(USER, PASSWORD, ip, data, tn)
+    tn.close()
+    print(path)
 
 if __name__ == '__main__':
     ips = []
