@@ -14,7 +14,8 @@ generator/*.xls
 #text-files
 base_for_others/*.txt
 pvid_search/*.txt
-
+100_plus/*.txt
 #json-files
 pvid_search/*.json
 base_for_others/*.json
+100_plus/*.json
