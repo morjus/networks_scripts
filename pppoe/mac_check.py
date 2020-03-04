@@ -9,7 +9,9 @@ import telnetlib #pip install telnetlib
 import sys
 from tabulate import tabulate #pip install tabulate
 import keyring
-
+'''show service id 100 subscriber-hosts ip 172.21.165.22 для поиска DHCP сессии
+    d0:17:c2:b1:af:30    1         IPCP         Fwding -PPPOE сессия
+        ec:41:18:c7:bb:59    N/A       DHCP         Fwding - DHCP сессия'''
 def huawei_zte_finder(s):
     '''На вход принимает список с мак-адресами.
     Адаптирует мак-адреса 0000-5e00-018b и 0000.5e00.018b в вид 50-FF-20-1A-1B-4D.

@@ -10,6 +10,10 @@ config ethernet_oam ports PORT link_monitor error_frame_period threshold 1 windo
 config ports PORT capability_advertised 10_half 10_full 100_half 100_full
 config max_mcast_group ports PORT ipv4 max_group 15 action replace
 config filter dhcp_server ports PORT state enable
+config dhcp_local_relay port PORT state enable
+config dhcp_local_relay vlan vlanid VLAN state ena
+config limited_multicast_addr ports  PORT ipv4 del profile_id 1
+config limited_multicast_addr ports  PORT ipv4 del profile_id 2
 delet access_pr pr 20
 create access_profile ethernet ethernet_type profile_id 20
 config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x8863 port all permit
