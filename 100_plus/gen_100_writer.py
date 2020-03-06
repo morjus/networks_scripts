@@ -207,13 +207,16 @@ def commands_writer(list_of_commands):
         print(command, 'is broken.')
         return False
 
-def commands_for_branch(vlan_for_100_plus,mgmt_vlan,ports):
+def commands_for_branch(vlan_for_100_plus,ports):
+    '''На вход влан для 100+ и порты, где прописан влан менеджмента. '''
     
-    creating_vlan = 'create vlan {} tag {}'.format(vlan_for_100_plus,vlan_for_100_plus)
-    config_ports = 'config vlan {} add tag {}'.format(vlan_for_100_plus, ports)
-    return [creating_vlan,config_ports]
+    creating_vlan = 'create vlan {} tag {}\r'.format(vlan_for_100_plus,vlan_for_100_plus)
+    config_ports = 'config vlan {} add tag {}\r'.format(vlan_for_100_plus, ports)
+    return [creating_vlan,config_ports,'save\r']
 
 def mgmt_parser(user, passw, tn, mgmt_vlan):
+    '''На вход логин, пароль, телнет объект, влан менеджмента.
+    Вводит команду на свиче, возвращает список портов, где прописан влан менеджмента и телнет объект. '''
 
     regex_for_tagged = r'Tagged\s+Ports\s+:\s+(?<ports>\S+)'
     command = 'show vlan '+mgmt_vlan +'\r'
@@ -221,6 +224,31 @@ def mgmt_parser(user, passw, tn, mgmt_vlan):
     response = tn.read_until(b'#', timeout=5)
     ports = re.search(regex_for_tagged, response).group('ports')
     return ports, tn
+
+def vlan_100_writer(tn, commands_on_uplink):
+    '''На вход телнет объект и список команд, которые нужно прописать на свиче.
+    Если всё проходит, возвращает True '''
+
+    for command in commands_on_uplink:
+        tn.write(command.encode('ascii'))
+        tn.read_until(b'#', timeout=5)
+    return True
+
+def neighbors_changer(ips, user, password):
+    '''На вход поступает список ip адресов, логин, пароль. 
+    Инициализируется подключение, происходит поиск портов, где влан менеджмента.
+    Генерируются команды для отправки на свич. 
+    Команды отправляются. В случае успеха возвращает True.'''
+
+    for ip in ips:
+        if ip_ping_checker(ip):
+            tn, data = full_connection(user, password, ip)
+            if 'D-Link' in data:
+                ports, tn = mgmt_parser(user,password,tn,mgmt_vlan)
+                commands = commands_for_branch(vlan_for_100_plus,ports)
+                if vlan_100_writer(tn,commands):
+                    tn.close()
+                    return True
 
 def main(user,passw,ip,port):
 
@@ -251,8 +279,4 @@ if __name__ == '__main__':
     PASSWORD = keyring.get_password("work_for_switches", "khusainov.if")   #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< CAUTION!!!!
     path, commands = main(USER,PASSWORD, ip, port)
     print(vlan_for_100_plus)
-
-
-    #path = mku_finder(USER, PASSWORD, ip)
-#    print(path)
-#    print (commands)
+    neighbors_changer
