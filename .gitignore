@@ -7,6 +7,7 @@ pppoe/old_ver/
 pvid_search/ignore/
 pvid_search/bras_parser/
 pvid_search/__pycache__/
+ip_cam_omny/pages/
 
 #xls-files
 generator/*.xls
