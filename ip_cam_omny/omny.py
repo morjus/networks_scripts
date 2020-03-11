@@ -115,6 +115,8 @@ def set_new_admin_password_on_security_page(browser, admin_pass):
     select_row = browser.find_element(By.CSS_SELECTOR,"#table_row_0")
     browser.execute_script("arguments[0].setAttribute('class','cls_usermanage_list_item_size cls_usermanage_list_row_selected')", select_row)
     button = browser.find_element(By.ID, "button_usermanage_modify").click()
+    button = browser.find_element(By.ID, "button_usermanage_modify")
+    browser.execute_script("arguments[0].click();", button)
     time.sleep(2)
     browser.switch_to_default_content()
     return browser
@@ -153,6 +155,7 @@ def set_pppoe_login_password(browser, login, passw):
 
     save_button = browser.find_element(By.ID, 'button_pppoe_save')
     #save_button.click()
+    browser.switch_to_default_content()
     return browser
 
 def set_video_options(browser):
@@ -215,11 +218,11 @@ if __name__ == "__main__":
     try:
         browser = login(browser())
         browser = go_to_options(browser)
-        browser = go_to_time(browser)
-        browser = set_time(browser)
+        #browser = go_to_time(browser)
+        #browser = set_time(browser)
         browser = set_new_admin_password_on_security_page(browser, admin_pass)
-        browser = set_pppoe_login_password(browser, pppoe_login, pppoe_password)
-        browser = set_video_options(browser)
+        #browser = set_pppoe_login_password(browser, pppoe_login, pppoe_password)
+        #browser = set_video_options(browser)
     #except Exception as error:
     #    print(f"Трейсбэк: {error}")
     finally:
