@@ -4,7 +4,8 @@ import telnetlib
 import time
 from pprint import pprint
 from switch_management_refactoring import full_connection, mku_finder, begin_connection, end_connection, snmp_get_next, connector, ip_ping_checker, get_model, check_ip, checkswmgmt, model_choicer
-'''Надо переписать шаблоны через yaml'''
+'''Надо переписать шаблоны через yaml
+Неправильная последовательность команд. Сначала тегом прокидывает везде, что неправильно. Надо добавить эту команду после генерации ACL'''
 
 def dlink_request(ip,OIDS):
     '''На вход поступает ip адрес и словарь с OID, которые необходимо обработать.
@@ -279,4 +280,4 @@ if __name__ == '__main__':
     PASSWORD = keyring.get_password("work_for_switches", "khusainov.if")   #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< CAUTION!!!!
     path, commands = main(USER,PASSWORD, ip, port)
     print(vlan_for_100_plus)
-    neighbors_changer
+    neighbors_changer(path,USER,PASSWORD)
