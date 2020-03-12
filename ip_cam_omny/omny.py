@@ -1,18 +1,21 @@
 import time
 from selenium import webdriver as wb
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
+"""
+Надо переписать через ООП.
+"""
 
 def browser():
     print("\nstart browser for make OMNY..")
     browser = wb.Chrome()
     return browser
 
-link = "http://10.90.239.141/"
+link = "http://192.168.1.120/"
 uname = "admin"
-def_passw = "yabdeaps"
+def_passw = "admin"
 
 
 def login(browser, passw):
@@ -46,15 +49,6 @@ def go_to_time(browser):
     browser.execute_script("arguments[0].setAttribute('class','cls_submenu_items_text cls_submenu_item_selected')", datetime_menu)
     time.sleep(1)
     datetime_menu.click()
-    #time.sleep(10)
-    #browser.find_element(By.CSS_SELECTOR, '#div_children_page_area')
-    '''
-    execute_script("document.getElementById('allImages').value = '../uploads/b31f8a31-9d4e-49a6-b613-fb902de6a823.jpg';")
-    Открыто: #div_submenu_item_datetime.cls_submenu_items_text cls_submenu_item_selected
-    Закрыто: #div_submenu_item_datetime
-     '''
-    #datetime_menu = browser.find_element(By.CSS_SELECTOR, "#pmenu_sub_datetime")
-    #datetime_menu.click()
     return browser
 
 def set_time(browser):
@@ -67,18 +61,11 @@ def set_time(browser):
     browser.switch_to_frame(subframe)
     wait = WebDriverWait(browser,15)
     wait.until(EC.visibility_of_element_located((By.ID, "button_devicetime_save")))
-    #browser.find_element(By.CSS_SELECTOR, '[src^="subpages/datetime"]')
-    #time.sleep(10)
-    #browser.switch_to_default_content()
+    select_time_zone = browser.find_element(By.CSS_SELECTOR, "#sel_time_zone")
+    select_time_zone.find_element(By.CSS_SELECTOR,'option:nth-child(29)').click()
+    time.sleep(1)
     manual_time = browser.find_element(By.CSS_SELECTOR, '#input_manual_date')
     browser.execute_script("arguments[0].setAttribute('disabled','disabled')", manual_time)
-    '''
-    time.sleep(1)
-    checkbox = browser.find_element(By.CSS_SELECTOR, '[for="input_ntp_enable"]') #[for="input_ntp_enable"]
-    time.sleep(1)
-    checkbox.click()#label_manual_set
-    time.sleep(1)
-    '''
     input_ntp_ip = browser.find_element(By.CSS_SELECTOR, "#input_ntp_server_addr")
     input_ntp_ip.clear()
     input_ntp_ip.click()
@@ -162,7 +149,7 @@ def set_pppoe_login_password(browser, login, passw):
     wait = WebDriverWait(browser,15)
     wait.until(EC.visibility_of_element_located((By.ID, "button_pppoe_save")))
     pppoe_checkbox = browser.find_element(By.ID, 'check_enable_pppoe')
-    #pppoe_checkbox.click()
+    pppoe_checkbox.click()
 
     pppoe_login = browser.find_element(By.ID, 'input_user_name')
     pppoe_login.clear()
@@ -174,7 +161,7 @@ def set_pppoe_login_password(browser, login, passw):
     pppoe_password.send_keys(passw)
 
     save_button = browser.find_element(By.ID, 'button_pppoe_save')
-    #save_button.click()
+    save_button.click()
     browser.switch_to_default_content()
     return browser
 
@@ -188,6 +175,7 @@ def set_video_options(browser):
     Устанавливает разрешение главного потока 1280х720
     Убирает чекбоксы "Включить аудио" с обоих потоков.
     Нажимает сохранить
+    Логинится с новым паролем
     '''
     audio_video_options = browser.find_element(By.CSS_SELECTOR, "#pmenu_audio_video")
     audio_video_options.click()
@@ -218,7 +206,7 @@ def set_video_options(browser):
     wait.until(EC.visibility_of_element_located((By.ID, "button_video_save")))
 
     resolution = browser.find_element(By.CSS_SELECTOR, "#select_video_main_resolution")
-    resolution.find_element(By.CSS_SELECTOR,'option:nth-child(1)').click()
+    resolution.find_element(By.CSS_SELECTOR,'option:nth-child(3)').click()
     time.sleep(1)
     checkbox_main_audio = browser.find_element(By.ID, 'check_enable_main_withaudio')
     checkbox_main_audio.click()
@@ -226,15 +214,15 @@ def set_video_options(browser):
     checkbox_sub_audio = browser.find_element(By.ID, 'check_enable_sub_withaudio')
     checkbox_sub_audio.click()
     save_button = browser.find_element(By.ID, "button_video_save")
-    #save_button.click()
+    save_button.click()
 
     browser.switch_to_default_content()
     return browser
 
 if __name__ == "__main__":
-    pppoe_login = 'SAMPLE_LOGIN'
-    pppoe_password = 'SAMPLE_PASSWORD'
-    admin_pass = "yabdeaps"
+    pppoe_login = 'COMMON_LOGIN'
+    pppoe_password = 'COMMON_PASSW'
+    admin_pass = "COMMON_ADMIN_PASSWORD"
     try:
         browser = login(browser(),def_passw)
         browser = go_to_options(browser)
