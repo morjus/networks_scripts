@@ -8,7 +8,7 @@ pvid_search/ignore/
 pvid_search/bras_parser/
 pvid_search/__pycache__/
 ip_cam_omny/pages/
-
+ip_cam_omny/geckodriver.log
 #xls-files
 generator/*.xls
 

@@ -12,10 +12,10 @@ def browser():
 
 link = "http://10.90.239.141/"
 uname = "admin"
-passw = "yabdeaps"
+def_passw = "yabdeaps"
 
 
-def login(browser):
+def login(browser, passw):
     '''
     Логинится на страницу.
     '''
@@ -114,11 +114,31 @@ def set_new_admin_password_on_security_page(browser, admin_pass):
 
     select_row = browser.find_element(By.CSS_SELECTOR,"#table_row_0")
     browser.execute_script("arguments[0].setAttribute('class','cls_usermanage_list_item_size cls_usermanage_list_row_selected')", select_row)
+    row_click = browser.find_element(By.CSS_SELECTOR, '.cls_usermanage_list_item')
+    row_click.click()
+    time.sleep(1)
     button = browser.find_element(By.ID, "button_usermanage_modify").click()
-    button = browser.find_element(By.ID, "button_usermanage_modify")
-    browser.execute_script("arguments[0].click();", button)
-    time.sleep(2)
+    wait.until(EC.visibility_of_element_located((By.ID, "button_usermanage_dialog_save")))
+    passw_input = browser.find_element(By.ID, "input_usermanage_password_text")
+    passw_input.click()
+    time.sleep(1)
+    passw_input.send_keys(admin_pass)
+    passw_confirm = browser.find_element(By.ID, "input_usermanage_confirm_text")
+    passw_confirm.click()
+    time.sleep(1)
+    passw_confirm.send_keys(admin_pass)
+    button = browser.find_element(By.ID, "button_usermanage_dialog_save")
+    button.click()
+    time.sleep(1)
     browser.switch_to_default_content()
+
+    login = browser.find_element(By.CSS_SELECTOR, "#input_user_name_text")
+    login.clear()
+    login.send_keys(uname)
+    password = browser.find_element(By.CSS_SELECTOR, "#input_password_text")
+    password.send_keys(admin_pass)
+    button = browser.find_element(By.CSS_SELECTOR, "#button_login_ipcweb")
+    button.click()
     return browser
 
 def set_pppoe_login_password(browser, login, passw):
@@ -214,17 +234,18 @@ def set_video_options(browser):
 if __name__ == "__main__":
     pppoe_login = 'SAMPLE_LOGIN'
     pppoe_password = 'SAMPLE_PASSWORD'
-    admin_pass = 'ADMINPASS'
+    admin_pass = "yabdeaps"
     try:
-        browser = login(browser())
+        browser = login(browser(),def_passw)
         browser = go_to_options(browser)
-        #browser = go_to_time(browser)
-        #browser = set_time(browser)
+        browser = go_to_time(browser)
+        browser = set_time(browser)
         browser = set_new_admin_password_on_security_page(browser, admin_pass)
-        #browser = set_pppoe_login_password(browser, pppoe_login, pppoe_password)
-        #browser = set_video_options(browser)
-    #except Exception as error:
-    #    print(f"Трейсбэк: {error}")
+        browser = go_to_options(browser)
+        browser = set_pppoe_login_password(browser, pppoe_login, pppoe_password)
+        browser = set_video_options(browser)
+    except Exception as error:
+        print(f"Трейсбэк: {error}")
     finally:
         time.sleep(5)
         print('\nclosing browser...')
