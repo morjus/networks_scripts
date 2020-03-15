@@ -208,11 +208,11 @@ def set_video_options(browser):
     resolution = browser.find_element(By.CSS_SELECTOR, "#select_video_main_resolution")
     resolution.find_element(By.CSS_SELECTOR,'option:nth-child(3)').click()
     time.sleep(1)
-    checkbox_main_audio = browser.find_element(By.ID, 'check_enable_main_withaudio')
-    checkbox_main_audio.click()
+    #checkbox_main_audio = browser.find_element(By.ID, 'check_enable_main_withaudio')
+    #checkbox_main_audio.click()
 
-    checkbox_sub_audio = browser.find_element(By.ID, 'check_enable_sub_withaudio')
-    checkbox_sub_audio.click()
+    #checkbox_sub_audio = browser.find_element(By.ID, 'check_enable_sub_withaudio')
+    #checkbox_sub_audio.click()
     save_button = browser.find_element(By.ID, "button_video_save")
     save_button.click()
 
@@ -220,9 +220,9 @@ def set_video_options(browser):
     return browser
 
 if __name__ == "__main__":
-    pppoe_login = 'COMMON_LOGIN'
-    pppoe_password = 'COMMON_PASSW'
-    admin_pass = "COMMON_ADMIN_PASSWORD"
+    pppoe_login = ''
+    pppoe_password = ''
+    admin_pass = ""
     try:
         browser = login(browser(),def_passw)
         browser = go_to_options(browser)

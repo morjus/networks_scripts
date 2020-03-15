@@ -136,6 +136,9 @@ def model_choicer(model):
     elif model == 'JetStream 24-Port Gigabit L2+ Managed Switch with 4 SFP Slots':
         models['Tp-Link'] = 'T2600G-28TS_AC'
         return models
+    elif model == 'MES2428 DC 28-port 1G Managed Switch':
+        models['Eltex'] = 'MES2428'
+        return models
     else:
         print('Описания действий для '+model+' нет в скрипте.')
         return None
@@ -150,8 +153,10 @@ def connector(user,passw,host,model):
         return huawei_connect(user,passw,host)
     elif 'Tp-Link' in model:
         return tp_link_connect(user,passw,host)
-    elif model['Maipu']:
+    elif 'Maipu' in model:
         pass
+    elif 'Eltex' in model:
+        return eltex_connect(user,passw,host)
     else:
         print('В скрипте нет модели',model)
         return None
@@ -162,6 +167,22 @@ def d_link_connect(user,passw,host):
     telnetconnect = telnetlib.Telnet()
     telnetconnect.open(host, 23, 5)
     telnetconnect.read_until(b'name:', timeout=3)
+    telnetconnect.write(user.encode('ascii') + b'\n')
+    telnetconnect.read_until(b'word:', timeout=3)
+    telnetconnect.write(passw.encode('ascii') + b'\r')
+    login_mes = telnetconnect.read_until(b'#', timeout=5)
+    if b'#' in login_mes:
+        print(host,'login ok!')
+        return telnetconnect
+    else:
+        print("Can't login.")
+    
+def eltex_connect(user,passw,host):
+    '''Инициализирует подключение к eltex, возвращает объект с соединением'''
+
+    telnetconnect = telnetlib.Telnet()
+    telnetconnect.open(host, 23, 5)
+    telnetconnect.read_until(b'login:', timeout=3)
     telnetconnect.write(user.encode('ascii') + b'\n')
     telnetconnect.read_until(b'word:', timeout=3)
     telnetconnect.write(passw.encode('ascii') + b'\r')
@@ -250,6 +271,14 @@ def begin_connection(user,passw,host,model,tn):
             print('Connection opened.')
         except:
             print('Error during huawei_begin()')
+    
+    def eltex_begin(user,passw,host):
+        commands_for_eltex = ['set cli pagination off\r']
+        for command in commands_for_eltex:
+            tn.write(command.encode('ascii'))
+            tn.read_until(b'#', timeout=5)
+        print('Connection opened.')
+
     try:
         if 'D-Link' in model:
             d_link_begin(user,passw,host)
@@ -257,8 +286,10 @@ def begin_connection(user,passw,host,model,tn):
             huawei_begin(user,passw,host)
         elif 'Tp-Link' in model:
             tp_link_begin(user,passw,host)
-        elif model['Maipu']:
-            pass
+        elif 'Maipu' in model:
+            eltex_begin(user,passw,host)
+        elif 'Eltex' in model:
+            eltex_begin(user,passw,host)
         else:
             print('В скрипте нет модели',model)
             return None
@@ -308,6 +339,16 @@ def end_connection(user,passw,host,model,tn):
             print('Connection closed.')
         except:
             print('Error during huawei_end()')
+    
+    def eltex_end(user,passw,host):
+        commands_for_eltex = ['end\r','set cli pagination on\r',
+            'logout\r']
+        #try:
+        for command in commands_for_eltex:
+            tn.write(command.encode('ascii'))
+        print('Connection closed.')
+        #except:
+        #    print('Error during eltex_end()')
 
     try:
         if 'D-Link' in model:
@@ -316,8 +357,10 @@ def end_connection(user,passw,host,model,tn):
             huawei_end(user,passw,host)
         elif 'Tp-Link' in model:
             tp_link_end(user,passw,host)
-        elif model['Maipu']:
+        elif 'Maipu' in model:
             pass
+        elif 'Eltex' in model:
+            eltex_end(user,passw,host)
         else:
             print('В скрипте нет модели',model)
             return None
@@ -451,16 +494,17 @@ def full_connection(user,passw,host):
     Возвращает объект соединения.'''
 
     data = {}
-    model_snmp_res = get_model(ip)
+    model_snmp_res = get_model(host)
     try:
         data.update(model_choicer(model_snmp_res))
-        print(ip,'а модель такая: ', model_choicer(model_snmp_res))
+        print(data)
+        print(host,'а модель такая: ', model_choicer(model_snmp_res))
         try:
             tn = connector(user,passw,host, data)
             begin_connection(user,passw,host, data, tn)
             return tn, data
-        except:
-            print("Can't connect or can't login.")
+        except Exception as error:
+            print("Can't connect or can't login,", 'traceback:\n', error)
             return False
     except:
         print('No such model in model_choicer().')
