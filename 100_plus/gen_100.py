@@ -1,30 +1,23 @@
 import re
+import pyperclip
+import win32clipboard
 import keyring
 import telnetlib
 import time
 from pprint import pprint
 from switch_management import begin_connection, end_connection, snmp_get_next, connector, ip_ping_checker, get_model, check_ip, checkswmgmt, model_choicer
+
 '''Надо переписать шаблоны через yaml'''
 
-def dlink_request(ip,OIDS):
-    '''На вход поступает ip адрес и словарь с OID, которые необходимо обработать.
-    На выходе словарь с полученными значениями.'''
+def dlink_request(ip,OID):
+    '''На вход поступает ip адрес и OID.
+    На выходе значение за этим OID.'''
 
     try:
-        result = {}
-        for request_data, request_oid in OIDS.items():
-            if request_data == 'HOSTNAME':
-                result[request_data] = snmp_get_next(ip,request_oid,standalone_value=True)
-            elif request_data == 'UPTIME':
-                ticks = (snmp_get_next(ip,request_oid,standalone_value=True)) #timeticks
-                seconds = int(ticks)/100
-                uptime = timedelta(seconds=seconds)
-                result[request_data] = str(uptime)
-            else:
-                result[request_data] = snmp_get_next(ip,request_oid)
+        result = snmp_get_next(ip,OID)
         return result
-    except:
-        print(ip,request_oid, 'error')
+    except Exception as error:
+        print('dlink_request() error:', error)
 
 def recur_maker(port,vlan):
     '''Находит первый порт, первый влан.
@@ -50,10 +43,8 @@ def parser(ip, port_for_using):
     '''Проверяет pvid по snmp и помещает все вланы в список. 
     Возвращает влан, который нужно использовать для 100+ на порте'''
 
-    dlink_oids = {
-        'PVID': '1.3.6.1.2.1.17.7.1.4.5.1.1'
-    }
-    pvids = dlink_request(ip,dlink_oids)['PVID']
+    dlink_pvid = '1.3.6.1.2.1.17.7.1.4.5.1.1'
+    pvids = dlink_request(ip,dlink_pvid)
     pppoe_vlans = [i for i in range(1000,1500)]
     regex = r'(\d{4})'
     fetch = None
@@ -66,8 +57,10 @@ def parser(ip, port_for_using):
                     fetched_port = int(port)
                     break
     array_of_vlans = recur_maker(fetched_port,fetched_vlan)
-    return array_of_vlans[int(port_for_using)-1]
-    
+    if array_of_vlans:
+        return array_of_vlans[int(port_for_using)-1]
+    else:
+        return False    
 
 def commands_writer(list_of_commands):
     '''Принимает на вход список команд, отправляет их по очереди'''
@@ -85,21 +78,27 @@ def acl_20_searcher(tn,model):
     '''Отправляет команду show config current_config include "config access_profile profile_id 20"
     Возвращает список портов в правиле об IPV6'''
 
-    command_for_acl_20 = 'show config current_config include "config access_profile profile_id 20"\r'
+    #command_for_acl_20 = 'show config current_config include "config access_profile profile_id 20"\r'
     if "DES-1210-28/ME/B2" in model or "DES-1210-28/ME/B3" in model:
-        regex_for_acl_20 = r'config\s+access_profile\s+profile_id\s+20\s+add\s+access_id\s+\d+\s+ethernet\s+ethernet_type\s+0x86[dD]*\s+port\s+(?P<ports>\S+)\s+permit'
+        command_for_acl_20 = 'show config current_config include "0x86dd"\r'
+        regex_for_acl_20 = r'config\s+access_profile\s+profile_id\s+20\s+add\s+access_id\s+\d+\s+ethernet\s+ethernet_type\s+0x86[dD]*\s+port\s+(\S+)\s+permit'
     else:
-        regex_for_acl_20 = r'config\s+access_profile\s+profile_id\s+20\s+add\s+access_id\s+\d\s+ethernet\s+ethernet_type\s+0x86[dD]*\s+port\s+(?P<ports>\S+)\s+permit'
+        command_for_acl_20 = 'show config current_config include "0x86DD"\r'
+        regex_for_acl_20 = r'config\s+access_profile\s+profile_id\s+20\s+add\s+access_id\s+\d\s+ethernet\s+ethernet_type\s+0x86[dD]*\s+port\s+(\S+)\s+permit'
     try:
         tn.write(command_for_acl_20.encode('ascii'))
         response = tn.read_until(b'#', timeout=30).decode('ascii') #30 секунд, потому что на некоторых 1210 очень долго идёт ответ
-        ports_20_acl = re.search(regex_for_acl_20,response).group('ports')
-        return ports_20_acl
-    except:
-        #print('ACL 20 not found or timeout error')
+        ports_20_acl = re.findall(regex_for_acl_20,response)
+        if len(ports_20_acl) == 1:
+            return ports_20_acl[0]
+        else:
+            ports_for_20_acl = ','.join(ports_20_acl)
+            return ports_for_20_acl
+    except Exception as error:
+        print('acl_20_seracher() error is:', error)
         return False
 
-def acl_20_configuring(ports,port):
+def acl_20_configuring(ports,port_for_100):
     '''На вход поступает список портов текстового вида '1,2,3,4,25-28' и номер порта под 100+.
     Возвращает список портов в виде списка  ['1', '2', '3', '4', '5', '6', '7', '8', '25', '26', '27', '28'], исключая порт с 100+'''
 
@@ -119,9 +118,8 @@ def acl_20_configuring(ports,port):
         splitted = ports.split('-')
         piece_of_ports = [i for i in range(int(splitted[0]),int(splitted[1])+1)]
         res.extend(piece_of_ports)
-    sorted(res)
     res = list(map(str,res))
-    res.remove(port)
+    res.remove(str(port_for_100))
     return res
 
 
@@ -149,39 +147,33 @@ def commands_100_plus_constructor(vlans_list, port, vlan_for_100_plus, model, po
         else:
             res.append('config vlan '+vlan+' delete '+ port + '\r')
     if "DES-1210-28/ME/B2" in model or "DES-1210-28/ME/B3" in model:
-        with open('templates\\commands_for_1210.txt', 'r') as f:
-            command_as_string = f.read()
-            command_list = command_as_string.split('\n')
-        for command in command_list:
-            command=command.replace('PORT', port)
-            command=command.replace('VLAN', str(vlan_for_100_plus))
-            if ports_for_acl_20:
-                command=command.replace('IPV6',IPV6PORTS)
-            command=command+'\r'
-            res.append(command)
-        with open(ip +'_100_plus.txt', 'w') as f:
-            for line in res:
-                f.write(line.strip('\r'))
-                f.write('\n')
-        print('Created file:'+ip+'_100_plus.txt')
-        return res
+        commands_maker('templates\\commands_for_1210.txt',ip,IPV6PORTS,res)
     else:
-        with open('templates\\commands_for_d_link.txt', 'r') as f:
-            command_as_string = f.read()
-            command_list = command_as_string.split('\n')
-        for command in command_list:
-            command=command.replace('PORT', port)
-            command=command.replace('VLAN', str(vlan_for_100_plus))
-            if ports_for_acl_20:
-                command=command.replace('IPV6',IPV6PORTS)
-            command=command+'\r'
-            res.append(command)
-        with open(ip +'_100_plus.txt', 'w') as f:
-            for line in res:
-                f.write(line.strip('\r'))
-                f.write('\n')
-        print('Created file:'+ip+'_100_plus.txt')
-        return res
+        commands_maker('templates\\commands_for_d_link.txt',ip,IPV6PORTS,res)
+
+def commands_maker(filename,ip,IPV6PORTS,res):
+    """Принимает на вход имя шаблона
+    Заменяет в нём все нужное, копирует результат в буфер обмена и сохраняет в отдельном файле."""
+
+    with open(filename, 'r') as f:
+        command_as_string = f.read()
+        command_list = command_as_string.split('\n')
+    for command in command_list:
+        command=command.replace('PORT', port)
+        command=command.replace('VLAN', str(vlan_for_100_plus))
+        if ports_for_acl_20:
+            command=command.replace('IPV6',IPV6PORTS)
+        command=command+'\r'
+        res.append(command)
+    with open(ip +'_100_plus.txt', 'w') as f:
+        for line in res:
+            f.write(line.strip('\r'))
+            f.write('\n')
+    with open(ip +'_100_plus.txt', 'r') as f:
+        text = f.read()
+        pyperclip.copy(text)
+    print('Created file:'+ip+'_100_plus.txt')
+    return res
 
 if __name__ == '__main__':
     ip = input('Enter ip-address: ').strip() #'192.168.0.1'
@@ -206,24 +198,33 @@ if __name__ == '__main__':
                 tn.write(show_vlans.encode('ascii'))
                 final_read = tn.read_until(b'#', timeout=5).decode('ascii')
                 vlans = re.findall(r'^\s+(\d+)', final_read, re.MULTILINE)
-                vlan_for_100_plus = parser(ip,port)
-                try:
-                    ports_for_acl_20 = acl_20_searcher(tn,model)
-                    ports_ipv6 = acl_20_configuring(ports_for_acl_20,port)
-                except:
-                    print("Can't make ACL 20.")
-                    ports_ipv6 = None
-                commands = commands_100_plus_constructor(vlans, port, vlan_for_100_plus, model, ports_for_acl_20 =ports_ipv6)
+                if len(vlans)>5:
+                    vlan_for_100_plus = parser(ip,port)
+                    if vlan_for_100_plus:
+                        try:
+                            ports_for_acl_20 = acl_20_searcher(tn,model)
+                            ports_ipv6 = acl_20_configuring(ports_for_acl_20,port)
+                        except Exception as error:
+                            print("Can't make ACL 20:", error)
+                            ports_ipv6 = None
+                        commands_100_plus_constructor(vlans, port, vlan_for_100_plus, model, ports_for_acl_20 =ports_ipv6)
+                        end_connection(USER, PASSWORD, ip, data, tn)
+                        tn.close()
+                        print('Done.')
+                        input('Press any key to quit.')
+                    else:
+                        print(ip,'in this switch no vlan in range 1000-1500.')
+                        end_connection(USER, PASSWORD, ip, data, tn)
+                        tn.close()
+                else:
+                    print(port, 'number of vlans in this port <5. Seems like port already 100+ or something.')
+                    end_connection(USER, PASSWORD, ip, data, tn)
+                    tn.close()
+            except Exception as error:
                 end_connection(USER, PASSWORD, ip, data, tn)
                 tn.close()
-                print('Done.')
-                input('Press any key to quit.')
-            except:
-                end_connection(USER, PASSWORD, ip, data, tn)
-                tn.close()
-                print('Error during main()')
+                print('Error during main():', error)
                 input('Press any key to quit.')
         else:
             print("It's not D-Link!")
-            input('Press any key to quit.')
-        
+            input('Press any key to quit.') 

@@ -12,8 +12,9 @@ config max_mcast_group ports PORT ipv4 max_group 15 action replace
 config filter dhcp_server ports PORT state enable
 config dhcp_local_relay port PORT state enable
 config dhcp_local_relay vlan vlanid VLAN state ena
-config limited_multicast_addr ports  PORT ipv4 del profile_id 1
-config limited_multicast_addr ports  PORT ipv4 del profile_id 2
+config limited_multicast_addr ports  PORT ipv4 add profile_id 1
+config limited_multicast_addr ports  PORT ipv4 add profile_id 2
+config vlan VLAN add untagged PORT
 delet access_pr pr 20
 create access_profile ethernet ethernet_type profile_id 20
 config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x8863 port all permit
@@ -23,3 +24,5 @@ config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_
 config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x888E port all deny
 config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x86DD port IPV6 permit
 config access_profile profile_id 20 add access_id auto_assign ethernet ethernet_type 0x86DD port all deny
+save
+ 
