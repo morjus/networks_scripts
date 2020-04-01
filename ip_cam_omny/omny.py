@@ -4,10 +4,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-"""
-Надо переписать через ООП.
-"""
-
 def browser():
     print("\nstart browser for make OMNY..")
     browser = wb.Chrome()
@@ -165,7 +161,7 @@ def set_pppoe_login_password(browser, login, passw):
     browser.switch_to_default_content()
     return browser
 
-def set_video_options(browser):
+def set_video_options(browser, audio = False):
     '''
     Кликает на Видео & Аудио. 
     Кликает на OSD
@@ -208,11 +204,12 @@ def set_video_options(browser):
     resolution = browser.find_element(By.CSS_SELECTOR, "#select_video_main_resolution")
     resolution.find_element(By.CSS_SELECTOR,'option:nth-child(3)').click()
     time.sleep(1)
-    #checkbox_main_audio = browser.find_element(By.ID, 'check_enable_main_withaudio')
-    #checkbox_main_audio.click()
+    if audio:
+        checkbox_main_audio = browser.find_element(By.ID, 'check_enable_main_withaudio')
+        checkbox_main_audio.click()
 
-    #checkbox_sub_audio = browser.find_element(By.ID, 'check_enable_sub_withaudio')
-    #checkbox_sub_audio.click()
+        checkbox_sub_audio = browser.find_element(By.ID, 'check_enable_sub_withaudio')
+        checkbox_sub_audio.click()
     save_button = browser.find_element(By.ID, "button_video_save")
     save_button.click()
 
@@ -220,9 +217,15 @@ def set_video_options(browser):
     return browser
 
 if __name__ == "__main__":
-    pppoe_login = ''
-    pppoe_password = ''
-    admin_pass = ""
+    pppoe_login = input('PPPOE LOGIN: ').strip()
+    pppoe_password = input('PPPOE PASSWORD: ').strip()
+    admin_pass = input('ADMIN PASSWORD FOR CAMERA:' ).strip()
+    audio_checkbox = input('Выключить звук?\nда/нет:')
+    while True:
+        if audio_checkbox == 'да' or audio_checkbox == 'нет':
+            break
+        else:
+            audio_checkbox = input(f"'{audio_checkbox}' это ни 'нет', ни 'да', введите корректный ответ:")
     try:
         browser = login(browser(),def_passw)
         browser = go_to_options(browser)
@@ -231,9 +234,12 @@ if __name__ == "__main__":
         browser = set_new_admin_password_on_security_page(browser, admin_pass)
         browser = go_to_options(browser)
         browser = set_pppoe_login_password(browser, pppoe_login, pppoe_password)
-        browser = set_video_options(browser)
+        if audio == 'да':
+            browser = set_video_options(browser, audio=True)
+        else:
+            browser = set_video_options(browser)
     except Exception as error:
-        print(f"Трейсбэк: {error}")
+        print(f"Текст ошибки: {error}")
     finally:
         time.sleep(5)
         print('\nclosing browser...')
