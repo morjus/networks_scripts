@@ -204,6 +204,7 @@ if __name__ == '__main__':
                         try:
                             ports_for_acl_20 = acl_20_searcher(tn,model)
                             ports_ipv6 = acl_20_configuring(ports_for_acl_20,port)
+                            ports_ipv6 = set(ports_ipv6)
                         except Exception as error:
                             print("Can't make ACL 20:", error)
                             ports_ipv6 = None
