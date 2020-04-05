@@ -15,10 +15,10 @@ from multiprocessing.dummy import Pool as ThreadPool
 models = {
     '1': 'HUAWEI S5320-28P-LI-AC',
     '2': 'TP-Link T2600G',
-    '3': 'D-Link 1210',
-    '4': 'D-link 3028/1228',
-    '5': 'Eltex',
-    '6': 'Maipu'
+    # '3': 'D-Link 1210',
+    # '4': 'D-link 3028/1228',
+    # '5': 'Eltex',
+    # '6': 'Maipu'
 }
 
 items = []  # Для списка с IP
@@ -97,7 +97,7 @@ legend = {
 def latinizator(letter, dic):
     """
     Замена кириллицы в тексте на латиницу.
-    
+
     """
 
     for i, j in dic.items():
@@ -108,7 +108,7 @@ def latinizator(letter, dic):
 def check_ip(ip):
     """
     Проверка корректности написанного IP-адреса. 
-    
+
     """
 
     try:
@@ -122,7 +122,7 @@ def check_ip(ip):
 def transliterator(file):
     """
     Транслитерирует файл, раскладывает файл в список, собирает через _
-    
+
     """
 
     with fileinput.FileInput(file, inplace=True, backup='.bak') as f:
@@ -136,7 +136,7 @@ def transliterator(file):
 def csv_from_excel(table):
     """
     Converting xls,xlsx file to csv file.
-    
+
     """
 
     wb = xlrd.open_workbook(table)
@@ -154,7 +154,7 @@ def convert_switch_data_to_dict(line):
     """
     Список списков с данными превращает в словарь
     Затем сохраняет его в виде yaml, где название файла его ip.
-    
+
     """
 
     list_line = []
@@ -185,7 +185,7 @@ def convert_switch_data_to_dict(line):
         yaml_data_path = script_files_path + 'full_yaml'
         with open(yaml_data_path, 'w') as final:
             final.write(yaml.dump(full_yaml_file,
-                                default_flow_style=False, allow_unicode=True))
+                                  default_flow_style=False, allow_unicode=True))
     else:
         print(f'{IP} is wrong. Please check your xls table for correct values of IPs.')
         pass
@@ -195,7 +195,7 @@ def convert_switch_data_to_dict(line):
 def converter(file):
     """
     Конвертирует ФАЙЛ CSV в YAML.
-    
+
     """
 
     with open(file, 'r') as source:  # , open(out_file, 'w') as res
@@ -216,7 +216,7 @@ def config_maker(ip):
     """
     Принимает на вход IP-адрес (причем yaml файл для конфигурации уже должен существовать),
      добавляет к этому IP .yaml, а затем генерирует конфиг
-     
+
     """
 
     yaml_data_path = script_files_path + 'full_yaml'
@@ -230,7 +230,10 @@ def config_maker(ip):
     elif model == 'TP-Link T2600G':  # tp-link
         env = Environment(loader=FileSystemLoader(
             'TEMPLATES\\TP-Link_T2600G'))
-        template = env.get_template('template.txt')
+        if b2b == '2':
+            template = env.get_template('template_uno.txt')
+        else:
+            template = env.get_template('template.txt')
     with open(yaml_data_path) as full:
         switches = yaml.safe_load(full)
     for switch in switches:
@@ -258,7 +261,7 @@ def model_choicer(model):
 def dir_maker(address, model):
     """
     Создаёт директории адресам, а затем по моделям коммутаторов. 
-    
+
     """
 
     current_dir = os.getcwd()  # Адрес текущей директории
@@ -266,9 +269,10 @@ def dir_maker(address, model):
     path_for_model = '\\' + model
     result = '\\RESULT'
     path = current_dir + result + path_for_address + path_for_model
+
     try:
         os.makedirs(path)
-    except:
+    except Exception:
         pass
     finally:
         return path
@@ -277,22 +281,20 @@ def dir_maker(address, model):
 def script_files():
     """
     Создаёт папку для файлов, которые генерятся в процессе работы скрипта. Затем они удаляются. 
-    
+
     """
 
     current_dir = os.getcwd()
     path_for_res = current_dir + '\\script_files'
     try:
         os.makedirs(path_for_res)
-    except:
-        pass
+    except Exception as error:
+        print(f'script_files error: {error}')
     return path_for_res
 
-def filename_exist_checker(filename):
-    os.path.exists(filename)
 
 if __name__ == '__main__':
-    
+
     while True:
         table_of_switches = 'serova_tp.xls'
         #table_of_switches = input('Enter filename: ')
