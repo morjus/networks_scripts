@@ -1,6 +1,7 @@
-from switch_management_refactoring import *
 from time import gmtime, strftime
-
+from multiprocessing import Pool
+from multiprocessing.dummy import Pool as ThreadPool
+from sw_mgmt import snmp_get_next, command_writer, first_launch_check, full_connection, ip_ping_checker, end_connection
 
 def ip_port_vlan_getter(path_to_ips):
     """
@@ -40,13 +41,13 @@ def command_maker(model, port, vlan=None):
 
     if "D-Link" in model:
         if "DES-1210-28" in model["D-Link"]:
-            with open("C:\\Users\\ifkhu\\dev\\python_projects\\ready\\iptv_changer\\commands_dlink_1210.txt", "r") as filename:
+            with open("commands_dlink_1210.txt", "r") as filename:
                 commands_template = filename.readlines()
         else:
-            with open("C:\\Users\\ifkhu\\dev\\python_projects\\ready\\iptv_changer\\commands_dlink.txt", "r") as filename:
+            with open("commands_dlink.txt", "r") as filename:
                 commands_template = filename.readlines()
     elif "Huawei" in model:
-        with open("C:\\Users\\ifkhu\\dev\\python_projects\\ready\\iptv_changer\\commands_huawei.txt", "r") as filename:
+        with open("commands_huawei.txt", "r") as filename:
             commands_template = filename.readlines()
 
     for command in commands_template:
@@ -59,31 +60,31 @@ def command_maker(model, port, vlan=None):
     return commands_for_write
 
 
-def main(ip, port, pvid):
-
-    USER = 'khusainov.if'
-    PASSWORD = keyring.get_password("work_for_switches", "khusainov.if")
+def main(switch):
+    ip, port, pvid = switch
+    LOGFILE = "log.txt"
+    USER, PASSWORD = first_launch_check()
     try:
         if ip_ping_checker(ip):
             print(ip + ' ' + 'START')
-            with open("C:\\Users\\ifkhu\\dev\\python_projects\\ready\\iptv_changer\\log.txt", "a") as log:
-                log.write(ip + ' ' + 'START ' + strftime("%d-%m-%Y %H:%M:%S", gmtime()) + '\n')
+            with open(LOGFILE, "a") as log:
+                log.write(ip + ' ' + 'START ' + '\n')
             tn, data = full_connection(USER, PASSWORD, ip)
             commands_for_write = command_maker(data, port, vlan=pvid)
             tn, error = command_writer(tn, data, commands=commands_for_write)
             if error != None:
-                print("Error in main():", str(error))
-                with open("C:\\Users\\ifkhu\\dev\\python_projects\\ready\\iptv_changer\\log.txt", "a") as log:
-                    log.write(ip + ' FAIL ' + strftime("%d-%m-%Y %H:%M:%S", gmtime()) + '\n')
+                print(ip + ' ' + 'FAIL')
+                with open(LOGFILE, "a") as log:
+                    log.write(ip + ' FAIL ' + '\n')
                     log.write(ip + ' ' + str(error) + '\n')
             else:
                 print(ip + ' ' + 'OK')
-                with open("C:\\Users\\ifkhu\\dev\\python_projects\\ready\\iptv_changer\\log.txt", "a") as log:
-                    log.write(ip + ' ' + 'OK ' + strftime("%d-%m-%Y %H:%M:%S", gmtime()) + '\n')
+                with open(LOGFILE, "a") as log:
+                    log.write(ip + ' ' + 'OK ' + '\n')
     except Exception as error:
         print("Error in main():", error)
-        with open("C:\\Users\\ifkhu\\dev\\python_projects\\ready\\iptv_changer\\log.txt", "a") as log:
-                log.write(ip + ' FAIL ' + strftime("%d-%m-%Y %H:%M:%S", gmtime()) + '\n')
+        with open(LOGFILE, "a") as log:
+                log.write(ip + ' FAIL ' + '\n')
                 log.write(ip + ' ' + str(error) + '\n')
     finally:
         end_connection(data, tn)
@@ -91,11 +92,13 @@ def main(ip, port, pvid):
 
 
 if __name__ == "__main__":
-    switches = ip_port_vlan_getter(
-        "C:\\Users\\ifkhu\\dev\\python_projects\\ready\\iptv_changer\\ips.txt")
-    #print(switches)
-    for switch in switches:
-        ip, port, vlan = switch
-        main(ip, port, vlan)
-    #print(ip, port, vlan)
-    #
+    switches = ip_port_vlan_getter("ips.txt")
+    LOGFILE = "log.txt"
+    with open(LOGFILE, "a") as log:
+                log.write(
+                    strftime('\n' + "------%d-%m-%Y %H:%M:%S------", gmtime()) + '\n')
+    pool = ThreadPool()
+    pool.map(main, switches)
+    pool.close()
+    pool.join()
+    input('Press "Enter" to exit.')
