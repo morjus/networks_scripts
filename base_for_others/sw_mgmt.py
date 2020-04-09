@@ -52,6 +52,27 @@ def snmp_get_next(ip, OID, community=keyring.get_password("snmp", "khusainov.if"
                     #print('%s = %s' % (name.prettyPrint(), val.prettyPrint()))
     return res
 
+def first_launch_check():
+    """
+    Проверяет создан ли с помощью keyring логин и пароль на брас. 
+    Если нет, то предлагает создать. 
+    Если создан, то запрашивает логин, пароль и возвращает данные.
+
+    """
+
+    if not keyring.get_password(socket.gethostname(), 'user'):
+        print("It's first launch. Please insert login and password. Don't worry it will encrypted.\n")
+        login = str(input('Please input your RADIUS login:'))
+        passw = str(input('Please input your RADIUS password:'))
+        keyring.set_password(socket.gethostname(), 'user', login)
+        keyring.set_password(socket.gethostname(), 'password', passw)
+        USER = keyring.get_password(socket.gethostname(), 'user')
+        PASSWORD = keyring.get_password(socket.gethostname(), 'password')
+    else:
+        USER = keyring.get_password(socket.gethostname(), 'user')
+        PASSWORD = keyring.get_password(socket.gethostname(), 'password')
+
+    return USER, PASSWORD
 
 def check_ip(ip):
     """
