@@ -8,7 +8,6 @@ import fileinput
 import sys
 import shutil
 from ipaddress import ip_address
-from datetime import datetime
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -121,7 +120,8 @@ def check_ip(ip):
 
 def transliterator(file):
     """
-    Транслитерирует файл, раскладывает файл в список, собирает через _
+    На вход поступает имя файла или путь до него.
+    Функция транслитерирует файл, раскладывает файл в список через ' ', собирает через _
 
     """
 
@@ -135,7 +135,8 @@ def transliterator(file):
 
 def csv_from_excel(table):
     """
-    Converting xls,xlsx file to csv file.
+    На вход поступает таблица формата xls или xlsx.
+    Возвращает эту таблицу в формате csv.
 
     """
 
@@ -152,11 +153,20 @@ def csv_from_excel(table):
 
 def convert_switch_data_to_dict(line):
     """
-    Список списков с данными превращает в словарь
-    Затем сохраняет его в виде yaml, где название файла его ip.
+    На вход поступает список вида:
+    ['TATARSTAN_9', '32768.0', '10.246.213.44', '1030-1053', '299.0']
+    Превращает это в словарь вида:
+    10.246.213.44:{'HOSTNAME': 'TATARSTAN_9',
+            'STP': '32768',
+            'IP': '10.246.213.44,
+            'GATEWAY': '10.246.213.1',
+            'MGMT': '299',
+            'access_ports': {1: 1060, ... 14: 1073, ... 24: 1083},
+            'B2B_VLAN':'200'}
+    Затем сохраняет его в виде yaml.
+    Возвращает список IP.
 
     """
-
     list_line = []
     list_line = line[3].split('-')
     ranger = list(range(int(list_line[0]), int(list_line[1])+1))
@@ -195,10 +205,11 @@ def convert_switch_data_to_dict(line):
 def converter(file):
     """
     Конвертирует ФАЙЛ CSV в YAML.
+    Попутно считает строчки, чтобы выдать ошибку с номером строки, если не удастся сформировать данные из строки.
 
     """
 
-    with open(file, 'r') as source:  # , open(out_file, 'w') as res
+    with open(file, 'r') as source: 
         reader = csv.reader(source)
         next(reader)
         s = list(reader)
@@ -215,7 +226,7 @@ def converter(file):
 def config_maker(ip):
     """
     Принимает на вход IP-адрес (причем yaml файл для конфигурации уже должен существовать),
-     добавляет к этому IP .yaml, а затем генерирует конфиг
+     добавляет к этому IP .yaml, а затем генерирует конфиг.
 
     """
 
@@ -250,6 +261,10 @@ def config_maker(ip):
 
 
 def model_choicer(model):
+    """
+    На основании выбора 1 или 2 возвращает модель для дальнейшего выбора шаблона конфигурации.
+    """
+
     if model == '1':
         return 'HUAWEI S5320-28P-LI-AC'
     elif model == '2':
@@ -296,11 +311,9 @@ def script_files():
 if __name__ == '__main__':
 
     while True:
-        table_of_switches = 'serova_tp.xls'
-        #table_of_switches = input('Enter filename: ')
+        table_of_switches = input('Enter filename: ')
         if os.path.exists(table_of_switches):
             b2b = str(input('For common enter 1\nFor b2b enter 2\nEnter:'))
-            #table_of_switches = 'serova_tp.xls'
             for k, v in models.items():
                 print(f'To make {v} configuration enter {k}')
             switch_model = input("Enter: ")
@@ -315,6 +328,7 @@ if __name__ == '__main__':
             pool.map(config_maker, ip_list)
             pool.close()
             pool.join()
+            # Удаляет файлы, которые генерятся в процессе работы
             shutil.rmtree(script_files_path)
             input("Done. Press 'Enter' for exit.")
             break
