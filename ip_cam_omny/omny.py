@@ -65,7 +65,7 @@ def set_time(browser):
     input_ntp_ip = browser.find_element(By.CSS_SELECTOR, "#input_ntp_server_addr")
     input_ntp_ip.clear()
     input_ntp_ip.click()
-    input_ntp_ip.send_keys("109.194.177.5")
+    input_ntp_ip.send_keys("192.168.1.1")
     save_button = browser.find_element(By.CSS_SELECTOR, "#button_devicetime_save")
     save_button.click()
     browser.switch_to_default_content()
