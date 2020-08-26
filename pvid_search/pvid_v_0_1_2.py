@@ -7,7 +7,7 @@ import json
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
 
-def snmp_get_next(ip,OID,community = 'holding08',port = 161,standalone_value=False):
+def snmp_get_next(ip,OID,community = '',port = 161,standalone_value=False):
     '''Аналог команды snmpwalk. На вход IP адрес и OID, который надо итерировать.
     Возвращает словарь, где ключ это число следующее за поданным на вход OID, 
     а значение ключа данные хранящиеся в этом OID
